@@ -1,0 +1,22 @@
+.map {
+    --hex-width: 40px;
+}
+
+.row {
+    width: 100%;
+    display: flex;
+    height: calc(var(--hex-width));
+}
+
+.row:nth-child(even) .hex {
+    transform: translateX(50%);
+}
+
+.hex {
+    position: relative;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: blue;
+    width: calc(var(--hex-width));
+    margin-top: calc(var(--hex-width) * -0.13397 * 2 - 2px);
+    margin-right: -1px;
+}
