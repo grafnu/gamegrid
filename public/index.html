@@ -2,14 +2,16 @@
   <head>
     <title>Railroaded!</title>
     <script src="/__/firebase/7.14.5/firebase-app.js"></script>
-    <script src="/__/firebase/6.2.3/firebase-auth.js"></script>
-    <script defer src="/__/firebase/6.2.3/firebase-firestore.js"></script>
+    <script src="/__/firebase/7.14.5/firebase-auth.js"></script>
+    <script src="/__/firebase/7.14.5/firebase-firestore.js"></script>
     <script src="/__/firebase/init.js"></script>
+    <script src="https://cdn.firebase.com/libs/firebaseui/4.0.0/firebaseui.js"></script>
     <script src="auth.js"></script>
     <script src="main.js"></script>
     <link rel="stylesheet" href="hexagon.css" />
   </head>
   <body>
+    <div id="status"></div>
     <div class="map">
       <div class="row">
         <div class="hex"></div>
@@ -67,6 +69,13 @@
         <div class="hex"></div>
         <div class="hex"></div>
       </div>
+    </div>
+    <div id="auth-body">
+      <div class="auth-main">
+        <div id="firebaseui-auth-container"></div>
+      </div>
+      <div class="auth-info">Signed in as <span id="user-name"></span>, <span id="user-email"></span>
+        <span id="sign-out" class="simple-button">Sign Out</span></div>
     </div>
   </body>
 </html>

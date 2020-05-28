@@ -2,9 +2,6 @@ if (!firebaseConfig) {
   console.error('firebaseConfig not properly initialized');
 }
 
-// Your web app's Firebase configuration
-firebase.initializeApp(firebaseConfig);
-
 var uiConfig = {
   signInSuccessUrl: window.location,
   signInOptions: [firebase.auth.GoogleAuthProvider.PROVIDER_ID]

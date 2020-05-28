@@ -1,5 +1,6 @@
 .map {
     --hex-width: 40px;
+    margin-top: calc(var(--hex-width)/2);
 }
 
 .row {
