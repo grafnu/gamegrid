@@ -1,6 +1,3 @@
-if (!firebaseConfig) {
-  console.error('firebaseConfig not properly initialized');
-}
 
 var uiConfig = {
   signInSuccessUrl: window.location,

@@ -1,0 +1,9 @@
+.unauthenticated .map {
+    display: none;
+}
+
+.simple-button {
+    background: blue;
+    color: white;
+    padding: 3px;
+}
