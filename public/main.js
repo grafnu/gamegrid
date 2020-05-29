@@ -30,9 +30,7 @@ function statusUpdate(message, e) {
 }
 
 function get_game_doc() {
-  const user_doc = db.collection('users').doc(uid);
-  const game_doc = user_doc.collection('games').doc('game');
-  return game_doc;
+  return db.collection('games').doc('game');
 }
 
 function write_cell(x, y) {
