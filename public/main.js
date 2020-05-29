@@ -4,6 +4,7 @@
  */
 
 var db;
+var uid;
 
 document.addEventListener('DOMContentLoaded', () => {
   db = firebase.firestore();
@@ -28,7 +29,50 @@ function statusUpdate(message, e) {
   document.getElementById('status').innerHTML = message;
 }
 
+function write_cell(x, y) {
+  const user_doc = db.collection('users').doc(uid);
+  const game_doc = user_doc.collection('games').doc('game');
+  let value = Math.floor(Math.random() * 4);
+  game_doc.set({
+    'grid': {
+      [x]: {
+        [y]: {
+          'value': value
+        }
+      }
+    }
+  }, {merge: true}).then(() => {
+    statusUpdate(`Updated cell ${x},${y} with ${value}`);
+  }).catch(e => {
+    statusUpdate('Error updating cell', e);
+  });
+}
+
+function hex_click(e) {
+  xpos = Number(e.srcElement.getAttribute('xpos'))
+  ypos = Number(e.srcElement.getAttribute('ypos'))
+  write_cell(xpos, ypos)
+}
+
+function make_map(x_size, y_size) {
+  container = document.getElementById('map');
+  for (y = 0; y < y_size; y++) {
+    row = document.createElement('div');
+    row.classList.add('row')
+    for (x = 0; x < x_size; x++) {
+      cell = document.createElement('div');
+      cell.setAttribute('xpos', `${x}`);
+      cell.setAttribute('ypos', `${y}`);
+      cell.classList.add('hex');
+      row.appendChild(cell);
+      cell.onclick = hex_click;
+    }
+    container.appendChild(row);
+  }
+}
+
 function setupUser() {
+  make_map(10, 10);
 }
 
 function authenticated(userData) {
@@ -38,8 +82,9 @@ function authenticated(userData) {
   }
   statusUpdate('Authentication succeeded for ' + userData.displayName);
 
-  const perm_doc = db.collection('permissions').doc(userData.uid);
-  const user_doc = db.collection('users').doc(userData.uid);
+  uid = userData.uid;
+  const perm_doc = db.collection('permissions').doc(uid);
+  const user_doc = db.collection('users').doc(uid);
   const timestamp = new Date().toJSON();
   user_doc.set({
     name: userData.displayName,
