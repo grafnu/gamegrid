@@ -7,3 +7,19 @@
     color: white;
     padding: 3px;
 }
+
+.hex[value="0"] {
+    background: red;
+}
+
+.hex[value="1"] {
+    background: blue;
+}
+
+.hex[value="2"] {
+    background: green;
+}
+
+.hex[value="3"] {
+    background: yellow;
+}

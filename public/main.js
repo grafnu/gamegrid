@@ -29,9 +29,14 @@ function statusUpdate(message, e) {
   document.getElementById('status').innerHTML = message;
 }
 
-function write_cell(x, y) {
+function get_game_doc() {
   const user_doc = db.collection('users').doc(uid);
   const game_doc = user_doc.collection('games').doc('game');
+  return game_doc;
+}
+
+function write_cell(x, y) {
+  const game_doc = get_game_doc()
   let value = Math.floor(Math.random() * 4);
   game_doc.set({
     'grid': {
@@ -71,8 +76,33 @@ function make_map(x_size, y_size) {
   }
 }
 
+function update_cell(xpos, ypos, value) {
+  selector = `.hex[xpos="${xpos}"][ypos="${ypos}"]`;
+  cell = document.querySelector(selector);
+  cell.setAttribute('value', value);
+}
+
+function update_map(grid) {
+  for (const xpos in grid) {
+    for (const ypos in grid[xpos]) {
+      update_cell(xpos, ypos, grid[xpos][ypos].value);
+    }
+  }
+}
+
+function register_listener() {
+  game_doc = get_game_doc();
+  game_doc.onSnapshot(snapshot => {
+    const data = snapshot.data();
+    update_map(data.grid);
+  }, e => {
+    console.log(e);
+  });
+}
+
 function setupUser() {
   make_map(10, 10);
+  register_listener();
 }
 
 function authenticated(userData) {
