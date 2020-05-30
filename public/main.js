@@ -4,7 +4,9 @@
  */
 
 var db;
-var uid;
+var my_uid;
+var player_id = -1;
+var player_name;
 
 document.addEventListener('DOMContentLoaded', () => {
   db = firebase.firestore();
@@ -20,7 +22,7 @@ function getQueryParam(field) {
   return string ? string[1] : null;
 }
 
-function statusUpdate(message, e) {
+function status_update(message, e) {
   console.log(message);
   if (e) {
     console.error(e);
@@ -29,25 +31,32 @@ function statusUpdate(message, e) {
   document.getElementById('status').innerHTML = message;
 }
 
+function get_user_doc(uid) {
+  return db.collection('users').doc(uid || my_uid);
+}
+
 function get_game_doc() {
   return db.collection('games').doc('game');
 }
 
 function write_cell(x, y) {
+  if (player_id < 0) {
+    status_update('View only player');
+    return;
+  }
   const game_doc = get_game_doc()
-  let value = Math.floor(Math.random() * 4);
   game_doc.set({
     'grid': {
       [x]: {
         [y]: {
-          'value': value
+          'value': player_id
         }
       }
     }
   }, {merge: true}).then(() => {
-    statusUpdate(`Updated cell ${x},${y} with ${value}`);
+    status_update(`Updated cell ${x},${y}`);
   }).catch(e => {
-    statusUpdate('Error updating cell', e);
+    status_update('Error updating cell', e);
   });
 }
 
@@ -58,12 +67,12 @@ function hex_click(e) {
 }
 
 function make_map(x_size, y_size) {
-  container = document.getElementById('map');
+  let container = document.getElementById('map');
   for (y = 0; y < y_size; y++) {
-    row = document.createElement('div');
+    let row = document.createElement('div');
     row.classList.add('row')
     for (x = 0; x < x_size; x++) {
-      cell = document.createElement('div');
+      let cell = document.createElement('div');
       cell.setAttribute('xpos', `${x}`);
       cell.setAttribute('ypos', `${y}`);
       cell.classList.add('hex');
@@ -75,8 +84,8 @@ function make_map(x_size, y_size) {
 }
 
 function update_cell(xpos, ypos, value) {
-  selector = `.hex[xpos="${xpos}"][ypos="${ypos}"]`;
-  cell = document.querySelector(selector);
+  let selector = `.hex[xpos="${xpos}"][ypos="${ypos}"]`;
+  let cell = document.querySelector(selector);
   cell.setAttribute('value', value);
 }
 
@@ -88,7 +97,7 @@ function update_map(grid) {
   }
 }
 
-function register_listener() {
+function register_game_listener() {
   game_doc = get_game_doc();
   game_doc.onSnapshot(snapshot => {
     const data = snapshot.data();
@@ -98,34 +107,90 @@ function register_listener() {
   });
 }
 
-function setupUser() {
+function setup_map() {
   make_map(10, 10);
-  register_listener();
+  register_game_listener();
+}
+
+function load_player(id, uid) {
+  user_doc = get_user_doc(uid);
+  let pel = document.createElement('div');
+  document.getElementById('players').appendChild(pel);
+  user_doc.get().then(doc => {
+    pel.innerHTML = `Player ${id} is ${doc.data().name} at ${doc.data().email}`;
+  });
+}
+
+function setup_player(id) {
+  status_update(`Player slot ${id}`);
+  if (id < 4) {
+    player_id = id;
+  }
+  players_doc = get_players_doc();
+  players_doc.get().then(doc => {
+    players = doc.data();
+    for (var player in players) {
+      load_player(player, players[player]);
+    }
+  });
+  setup_map();
+}
+
+function find_player_slot(players) {
+  for (var i = 0; players && players[i] && players[i] != my_uid; i++) {}
+  return i;
+}
+
+function get_players_doc() {
+  const game_doc = get_game_doc();
+  return game_doc.collection('players').doc('list');
+}
+
+function setup_user() {
+  const players_doc = get_players_doc();
+  db.runTransaction(trans => {
+    return trans.get(players_doc)
+      .then(doc => {
+        players = doc.data() || {};
+        id = find_player_slot(players);
+        if (players[id] != my_uid) {
+          players[id] = my_uid;
+          players_doc.set(players);
+        }
+        return id;
+      });
+  }).then(result => {
+    console.log('Transaction success!', result);
+    setup_player(result);
+  }).catch(err => {
+    console.log('Transaction failure:', err);
+  });
 }
 
 function authenticated(userData) {
   if (!userData) {
-    statusUpdate('Authentication failed, please sign in.');
+    status_update('Authentication failed, please sign in.');
     return;
   }
-  statusUpdate('Authentication succeeded for ' + userData.displayName);
+  status_update('Authentication succeeded for ' + userData.displayName);
+  player_name = userData.displayName;
 
-  uid = userData.uid;
-  const perm_doc = db.collection('permissions').doc(uid);
-  const user_doc = db.collection('users').doc(uid);
+  my_uid = userData.uid;
+  const perm_doc = db.collection('permissions').doc(my_uid);
+  const user_doc = get_user_doc();
   const timestamp = new Date().toJSON();
   user_doc.set({
     name: userData.displayName,
     email: userData.email,
     updated: timestamp
   }).then(function () {
-    statusUpdate('User info updated');
+    status_update('User info updated');
     perm_doc.get().then((doc) => {
       if (doc.exists && doc.data().enabled) {
-        setupUser();
+        setup_user();
       } else {
-        statusUpdate('User not enabled, contact your system administrator.');
+        status_update('User not enabled, contact your system administrator.');
       }
     });
-  }).catch((e) => statusUpdate('Error updating user info', e));
+  }).catch((e) => status_update('Error updating user info', e));
 }
