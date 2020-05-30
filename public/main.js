@@ -49,7 +49,7 @@ function write_cell(x, y) {
     'grid': {
       [x]: {
         [y]: {
-          'value': player_id
+          'pid': player_id
         }
       }
     }
@@ -66,12 +66,14 @@ function hex_click(e) {
   write_cell(xpos, ypos)
 }
 
-function make_map(x_size, y_size) {
+function make_map() {
+  const size = 10;
   let container = document.getElementById('map');
-  for (y = 0; y < y_size; y++) {
+  container.innerHTML = '';
+  for (y = 0; y < size; y++) {
     let row = document.createElement('div');
     row.classList.add('row')
-    for (x = 0; x < x_size; x++) {
+    for (x = 0; x < size; x++) {
       let cell = document.createElement('div');
       cell.setAttribute('xpos', `${x}`);
       cell.setAttribute('ypos', `${y}`);
@@ -83,16 +85,20 @@ function make_map(x_size, y_size) {
   }
 }
 
-function update_cell(xpos, ypos, value) {
+function update_cell(xpos, ypos, pid) {
   let selector = `.hex[xpos="${xpos}"][ypos="${ypos}"]`;
   let cell = document.querySelector(selector);
-  cell.setAttribute('value', value);
+  cell.setAttribute('pid', pid);
 }
 
 function update_map(grid) {
+  if (!grid) {
+    make_map();
+    return;
+  }
   for (const xpos in grid) {
     for (const ypos in grid[xpos]) {
-      update_cell(xpos, ypos, grid[xpos][ypos].value);
+      update_cell(xpos, ypos, grid[xpos][ypos].pid);
     }
   }
 }
@@ -101,20 +107,41 @@ function register_game_listener() {
   game_doc = get_game_doc();
   game_doc.onSnapshot(snapshot => {
     const data = snapshot.data();
-    update_map(data.grid);
+    if (data) {
+      update_map(data.grid);
+    } else {
+      update_map(null);
+    }
   }, e => {
     console.log(e);
   });
 }
 
 function setup_map() {
-  make_map(10, 10);
+  make_map();
   register_game_listener();
 }
 
+function reset_game() {
+  get_players_doc().delete();
+  get_game_doc().delete();
+}
+
 function load_player(id, uid) {
+  if (!uid) {
+    document.getElementById('players').innerHTML = '';
+    const rel = document.createElement('div');
+    rel.innerHTML = 'Reset Game';
+    rel.classList.add('simple-button');
+    rel.style.display = 'inline-block';
+    rel.onclick = reset_game;
+    document.getElementById('players').appendChild(rel);
+    return;
+  }
   user_doc = get_user_doc(uid);
-  let pel = document.createElement('div');
+  const pel = document.createElement('div');
+  pel.setAttribute('pid', id);
+  pel.classList.add('player-label');
   document.getElementById('players').appendChild(pel);
   user_doc.get().then(doc => {
     pel.innerHTML = `Player ${id} is ${doc.data().name} at ${doc.data().email}`;
@@ -128,12 +155,12 @@ function setup_player(id) {
   }
   players_doc = get_players_doc();
   players_doc.get().then(doc => {
-    players = doc.data();
+    load_player();
+    players = doc.data() || {};
     for (var player in players) {
       load_player(player, players[player]);
     }
   });
-  setup_map();
 }
 
 function find_player_slot(players) {
@@ -146,7 +173,7 @@ function get_players_doc() {
   return game_doc.collection('players').doc('list');
 }
 
-function setup_user() {
+function ensure_user() {
   const players_doc = get_players_doc();
   db.runTransaction(trans => {
     return trans.get(players_doc)
@@ -165,6 +192,11 @@ function setup_user() {
   }).catch(err => {
     console.log('Transaction failure:', err);
   });
+}
+
+
+function setup_user() {
+  get_players_doc().onSnapshot(snapshot => ensure_user());
 }
 
 function authenticated(userData) {
@@ -188,6 +220,7 @@ function authenticated(userData) {
     perm_doc.get().then((doc) => {
       if (doc.exists && doc.data().enabled) {
         setup_user();
+        setup_map();
       } else {
         status_update('User not enabled, contact your system administrator.');
       }

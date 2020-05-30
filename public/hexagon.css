@@ -19,4 +19,5 @@
     width: calc(var(--hex-width));
     margin-top: calc(var(--hex-width) * -0.13397 * 2 - 2px);
     margin-right: -1px;
+    background: lightgrey;
 }

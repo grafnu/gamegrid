@@ -3,23 +3,26 @@
 }
 
 .simple-button {
-    background: blue;
-    color: white;
+    background: lightblue;
     padding: 3px;
 }
 
-.hex[value="0"] {
+.player-label {
+    color: white;
+}
+
+div[pid="0"] {
     background: red;
 }
 
-.hex[value="1"] {
+div[pid="1"] {
     background: blue;
 }
 
-.hex[value="2"] {
+div[pid="2"] {
     background: green;
 }
 
-.hex[value="3"] {
+div[pid="3"] {
     background: yellow;
 }
