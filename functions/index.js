@@ -16,6 +16,25 @@ exports.user_update = functions.firestore.document('/users/{user}').onWrite((cha
   return null;
 });
 
+function make_move(move) {
+  pid = move.pid;
+  xpos = move.xpos;
+  ypos = move.ypos;
+  const game_doc = db.collection('games').doc('game');
+  console.log(`set ${xpos},${ypos} to ${pid}`);
+  game_doc.set({
+    'grid': {
+      [xpos]: {
+        [ypos]: {
+          'pid': pid
+        }
+      }
+    }
+  }, {merge: true}).then(() => {
+    console.log('move complete');
+  }).catch(e => console.log(e));
+}
+
 exports.player_update = functions.firestore.document('/games/{game}/players/{pid}').onWrite((change, context) => {
   const game = context.params.game;
   const pid = context.params.pid;
@@ -38,15 +57,19 @@ exports.player_update = functions.firestore.document('/games/{game}/players/{pid
       player_list = doc[1].data() || {};
       for (var i= 0; player_list[i]; i++) {
         if (player_list[i] == pid) {
-          return i;
+          player_data['pid'] = i;
+          return player_data;
         }
       }
       player_list[i] = pid;
       list_doc.set(player_list);
-      return i;
+      return null;
     });
   }).then(result => {
     console.log('Transaction success! ' + result);
+    if (result) {
+      make_move(result);
+    }
   }).catch(err => {
     console.log('Transaction failure:', err);
   });

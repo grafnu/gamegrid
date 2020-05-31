@@ -45,22 +45,19 @@ function get_game_doc() {
   return db.collection('games').doc('game');
 }
 
-function write_cell(x, y) {
+function write_move(x, y) {
   if (player_id < 0) {
     status_update('View only player');
     return;
   }
-  const game_doc = get_game_doc()
-  game_doc.set({
-    'grid': {
-      [x]: {
-        [y]: {
-          'pid': player_id
-        }
-      }
-    }
-  }, {merge: true}).then(() => {
-    status_update(`Updated cell ${x},${y}`);
+  const timestamp = new Date().toJSON();
+  const player = get_players_doc(my_uid);
+  player.set({
+    updated: timestamp,
+    xpos: x,
+    ypos: y
+  }).then(() => {
+    status_update(`Played cell ${x},${y}`);
   }).catch(e => {
     status_update('Error updating cell', e);
   });
@@ -69,7 +66,7 @@ function write_cell(x, y) {
 function hex_click(e) {
   xpos = Number(e.srcElement.getAttribute('xpos'))
   ypos = Number(e.srcElement.getAttribute('ypos'))
-  write_cell(xpos, ypos)
+  write_move(xpos, ypos)
 }
 
 function make_map() {
