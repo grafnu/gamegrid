@@ -10,8 +10,14 @@ var player_name;
 
 document.addEventListener('DOMContentLoaded', () => {
   db = firebase.firestore();
-  const settings = {
-  };
+  let settings = {};
+  if (location.hostname === "localhost") {
+    settings = {
+      host: "localhost:8080",
+      ssl: false
+    }
+    console.log('using local emulator');
+  }
   db.settings(settings);
   console.log('firestore db initialized');
 });
