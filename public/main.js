@@ -129,20 +129,24 @@ function setup_map() {
 }
 
 function reset_game() {
-  get_players_doc().delete();
-  get_game_doc().delete();
+  get_players_doc(my_uid).delete();
+}
+
+function reset_players() {
+  player_id = -1;
+  document.getElementById('players').innerHTML = '';
+  const rel = document.createElement('div');
+  rel.innerHTML = 'Reset Game';
+  rel.classList.add('simple-button');
+  rel.style.display = 'inline-block';
+  rel.onclick = reset_game;
+  document.getElementById('players').appendChild(rel);
 }
 
 function load_player(id, uid) {
-  if (!uid) {
-    document.getElementById('players').innerHTML = '';
-    const rel = document.createElement('div');
-    rel.innerHTML = 'Reset Game';
-    rel.classList.add('simple-button');
-    rel.style.display = 'inline-block';
-    rel.onclick = reset_game;
-    document.getElementById('players').appendChild(rel);
-    return;
+  if (uid == my_uid) {
+    status_update(`Player slot ${id}`);
+    player_id = id;
   }
   user_doc = get_user_doc(uid);
   const pel = document.createElement('div');
@@ -151,58 +155,41 @@ function load_player(id, uid) {
   document.getElementById('players').appendChild(pel);
   user_doc.get().then(doc => {
     pel.innerHTML = `Player ${id} is ${doc.data().name} at ${doc.data().email}`;
+  }).catch(e => {
+    status_update(`loading player ${id} from ${user_doc.path}`, e)
   });
 }
 
-function setup_player(id) {
-  status_update(`Player slot ${id}`);
-  if (id < 4) {
-    player_id = id;
-  }
+function get_players_doc(uid) {
+  return get_game_doc().collection('players').doc(uid || 'list');
+}
+
+function setup_players() {
   players_doc = get_players_doc();
   players_doc.get().then(doc => {
-    load_player();
+    reset_players();
     players = doc.data() || {};
     for (var player in players) {
       load_player(player, players[player]);
     }
-  });
+    if (player_id < 0) {
+      ensure_player();
+    }
+  }).catch(e => status_update('setup_players', e));
 }
 
-function find_player_slot(players) {
-  for (var i = 0; players && players[i] && players[i] != my_uid; i++) {}
-  return i;
+function ensure_player() {
+  const timestamp = new Date().toJSON();
+  const me_doc = get_players_doc(my_uid);
+  me_doc.set({
+    updated: timestamp
+  }).then(r => {
+    console.log('Player record updated');
+  }).catch(e => status_update('ensuring player', e));
 }
-
-function get_players_doc() {
-  const game_doc = get_game_doc();
-  return game_doc.collection('players').doc('list');
-}
-
-function ensure_user() {
-  const players_doc = get_players_doc();
-  db.runTransaction(trans => {
-    return trans.get(players_doc)
-      .then(doc => {
-        players = doc.data() || {};
-        id = find_player_slot(players);
-        if (players[id] != my_uid) {
-          players[id] = my_uid;
-          players_doc.set(players);
-        }
-        return id;
-      });
-  }).then(result => {
-    console.log('Transaction success!', result);
-    setup_player(result);
-  }).catch(err => {
-    console.log('Transaction failure:', err);
-  });
-}
-
 
 function setup_user() {
-  get_players_doc().onSnapshot(snapshot => ensure_user());
+  get_players_doc().onSnapshot(snapshot => setup_players());
 }
 
 function authenticated(userData) {
