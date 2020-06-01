@@ -41,7 +41,7 @@ exports.player_update = functions.firestore.document('/games/{game}/players/{pid
     return t.getAll(player_doc, game_doc).then(doc => {
       player_data = doc[0].data();
       game_data = doc[1].data();
-      if (!player_data) {
+      if (!player_data || !game_data) {
         console.log('No user data... resetting game.');
         const timestamp = new Date().toJSON();
         game_data = {
@@ -53,7 +53,7 @@ exports.player_update = functions.firestore.document('/games/{game}/players/{pid
       const player_list = game_data.players
       let idi = -1;
       for (var i= 0; player_list[i]; i++) {
-        if (player_list[i] == pid) {
+        if (player_list[i] === pid) {
           idi = i;
         }
       }
@@ -69,7 +69,7 @@ exports.player_update = functions.firestore.document('/games/{game}/players/{pid
       return null;
     });
   }).then(result => {
-    console.log('Transaction success! ' + result);
+    return console.log('Transaction success! ' + result);
   }).catch(err => {
     console.log('Transaction failure:', err);
   });

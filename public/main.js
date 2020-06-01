@@ -8,7 +8,7 @@ var my_uid;
 var player_id = -1;
 var player_name;
 var loaded_players = {};
-var game_started;
+var game_started = '';
 
 document.addEventListener('DOMContentLoaded', () => {
   db = firebase.firestore();
@@ -112,7 +112,7 @@ function update_map(grid) {
 function register_game_listener() {
   game_doc = get_game_doc();
   game_doc.onSnapshot(snapshot => {
-    const data = snapshot.data();
+    const data = snapshot.data() || {};
     if (data.started != game_started) {
       reset_map();
       game_started = data.started;
