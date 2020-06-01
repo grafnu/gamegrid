@@ -7,6 +7,8 @@ var db;
 var my_uid;
 var player_id = -1;
 var player_name;
+var loaded_players = {};
+var game_started;
 
 document.addEventListener('DOMContentLoaded', () => {
   db = firebase.firestore();
@@ -94,14 +96,15 @@ function update_cell(xpos, ypos, pid) {
   cell.setAttribute('pid', pid);
 }
 
+function reset_map() {
+  make_map();
+  reset_players();
+}
+
 function update_map(grid) {
-  if (!grid) {
-    make_map();
-    return;
-  }
   for (const xpos in grid) {
     for (const ypos in grid[xpos]) {
-      update_cell(xpos, ypos, grid[xpos][ypos].pid);
+      update_cell(xpos, ypos, grid[xpos][ypos].idi);
     }
   }
 }
@@ -110,18 +113,18 @@ function register_game_listener() {
   game_doc = get_game_doc();
   game_doc.onSnapshot(snapshot => {
     const data = snapshot.data();
-    if (data) {
-      update_map(data.grid);
-    } else {
-      update_map(null);
+    if (data.started != game_started) {
+      reset_map();
+      game_started = data.started;
     }
+    update_map(data.grid);
+    setup_players(data);
   }, e => {
     console.log(e);
   });
 }
 
 function setup_map() {
-  make_map();
   register_game_listener();
 }
 
@@ -130,6 +133,7 @@ function reset_game() {
 }
 
 function reset_players() {
+  loaded_players = {};
   player_id = -1;
   document.getElementById('players').innerHTML = '';
   const rel = document.createElement('div');
@@ -145,6 +149,10 @@ function load_player(id, uid) {
     status_update(`Player slot ${id}`);
     player_id = id;
   }
+  if (loaded_players[id]) {
+    return;
+  }
+  loaded_players[id] = uid;
   user_doc = get_user_doc(uid);
   const pel = document.createElement('div');
   pel.setAttribute('pid', id);
@@ -158,21 +166,17 @@ function load_player(id, uid) {
 }
 
 function get_players_doc(uid) {
-  return get_game_doc().collection('players').doc(uid || 'list');
+  return get_game_doc().collection('players').doc(uid);
 }
 
-function setup_players() {
-  players_doc = get_players_doc();
-  players_doc.get().then(doc => {
-    reset_players();
-    players = doc.data() || {};
-    for (var player in players) {
-      load_player(player, players[player]);
-    }
-    if (player_id < 0) {
-      ensure_player();
-    }
-  }).catch(e => status_update('setup_players', e));
+function setup_players(game_data) {
+  players = game_data.players || {};
+  for (var player in players) {
+    load_player(player, players[player]);
+  }
+  if (player_id < 0) {
+    ensure_player();
+  }
 }
 
 function ensure_player() {
@@ -183,10 +187,6 @@ function ensure_player() {
   }).then(r => {
     console.log('Player record updated');
   }).catch(e => status_update('ensuring player', e));
-}
-
-function setup_user() {
-  get_players_doc().onSnapshot(snapshot => setup_players());
 }
 
 function authenticated(userData) {
@@ -209,7 +209,6 @@ function authenticated(userData) {
     status_update('User info updated');
     perm_doc.get().then((doc) => {
       if (doc.exists && doc.data().enabled) {
-        setup_user();
         setup_map();
       } else {
         status_update('User not enabled, contact your system administrator.');

@@ -16,60 +16,60 @@ exports.user_update = functions.firestore.document('/users/{user}').onWrite((cha
   return null;
 });
 
-function make_move(move) {
-  pid = move.pid;
+function make_move(idi, game_data, move) {
   xpos = move.xpos;
   ypos = move.ypos;
-  const game_doc = db.collection('games').doc('game');
-  console.log(`set ${xpos},${ypos} to ${pid}`);
-  game_doc.set({
-    'grid': {
-      [xpos]: {
-        [ypos]: {
-          'pid': pid
-        }
-      }
+  if (xpos >= 0 && ypos >= 0) {
+    console.log(`set ${xpos},${ypos} to ${idi}`);
+    game_data.grid = game_data.grid || {};
+    game_data.grid[xpos] = game_data.grid[xpos] || {};
+    game_data.grid[xpos][ypos] = game_data.grid[xpos][ypos] || { idi: -1 };
+    grid_cell = game_data.grid[xpos][ypos];
+    if (grid_cell.idi < 0) {
+      grid_cell.idi = idi;
     }
-  }, {merge: true}).then(() => {
-    console.log('move complete');
-  }).catch(e => console.log(e));
+  }
 }
 
 exports.player_update = functions.firestore.document('/games/{game}/players/{pid}').onWrite((change, context) => {
   const game = context.params.game;
   const pid = context.params.pid;
-  if (pid == 'list') {
-    return null;
-  }
   const game_doc = db.collection('games').doc(game);
   const player_doc = game_doc.collection('players').doc(pid);
-  const list_doc = game_doc.collection('players').doc('list');
   console.log(`Game ${game} for ${pid}`);
   return db.runTransaction(t => {
-    return t.getAll(player_doc, list_doc).then(doc => {
+    return t.getAll(player_doc, game_doc).then(doc => {
       player_data = doc[0].data();
+      game_data = doc[1].data();
       if (!player_data) {
         console.log('No user data... resetting game.');
-        game_doc.delete();
-        list_doc.delete();
-        return null;
+        const timestamp = new Date().toJSON();
+        game_data = {
+          players: {},
+          started: timestamp,
+          grid: {}
+        };
       }
-      player_list = doc[1].data() || {};
+      const player_list = game_data.players
+      let idi = -1;
       for (var i= 0; player_list[i]; i++) {
         if (player_list[i] == pid) {
-          player_data['pid'] = i;
-          return player_data;
+          idi = i;
         }
       }
-      player_list[i] = pid;
-      list_doc.set(player_list);
+      if (idi < 0) {
+        player_list[i] = pid;
+        idi = i;
+        console.log(`Initializing ${idi} as ${pid}`);
+      }
+      if (player_data && player_data.updated) {
+        make_move(idi, game_data, player_data);
+      }
+      game_doc.set(game_data);
       return null;
     });
   }).then(result => {
     console.log('Transaction success! ' + result);
-    if (result) {
-      make_move(result);
-    }
   }).catch(err => {
     console.log('Transaction failure:', err);
   });
