@@ -19,14 +19,60 @@ exports.user_update = functions.firestore.document('/users/{user}').onWrite((cha
 function make_move(idi, game_data, move) {
   xpos = move.xpos;
   ypos = move.ypos;
+  const timestamp = new Date().toJSON();
   if (xpos >= 0 && ypos >= 0) {
     console.log(`set ${xpos},${ypos} to ${idi}`);
-    game_data.grid = game_data.grid || {};
+    game_data.moves[idi] = {
+      updated: timestamp,
+      move: move
+    }
+  }
+}
+
+function resolve_moves(game_data) {
+  const timestamp = new Date().toJSON();
+  let ready = 0;
+  let count = 0;
+  let moves = game_data.moves;
+  let last = game_data.last;
+  for (let idi in moves) {
+    if (moves[idi].updated > last) {
+      ready++;
+    }
+  }
+  if (ready == Object.keys(game_data.players).length) {
+    update_moves(game_data);
+    game_data.last = timestamp;
+  }
+}
+
+function update_moves(game_data) {
+  let moves = game_data.moves;
+  let end = {};
+  for (let idi in moves) {
+    let xpos = moves[idi].move.xpos;
+    let ypos = moves[idi].move.ypos;
+    let key = `${xpos},${ypos}`
+    if (end[key]) {
+      end[key] = -1;
+    } else {
+      end[key] = idi;
+    }
+  }
+
+  for (let key in end) {
+    idi = end[key]
+    if (idi < 0) {
+      continue;
+    }
+    let xpos = moves[idi].move.xpos;
+    let ypos = moves[idi].move.ypos;
     game_data.grid[xpos] = game_data.grid[xpos] || {};
     game_data.grid[xpos][ypos] = game_data.grid[xpos][ypos] || { idi: -1 };
     grid_cell = game_data.grid[xpos][ypos];
     if (grid_cell.idi < 0) {
-      grid_cell.idi = idi;
+      grid_cell.idi = end[key];
+      console.log(`Resolving ${key} to ${end[key]}`);
     }
   }
 }
@@ -46,7 +92,9 @@ exports.player_update = functions.firestore.document('/games/{game}/players/{pid
         const timestamp = new Date().toJSON();
         game_data = {
           players: {},
+          moves: {},
           started: timestamp,
+          last: timestamp,
           grid: {}
         };
       }
@@ -65,6 +113,7 @@ exports.player_update = functions.firestore.document('/games/{game}/players/{pid
       if (player_data && player_data.updated) {
         make_move(idi, game_data, player_data);
       }
+      resolve_moves(game_data);
       game_doc.set(game_data);
       return null;
     });
