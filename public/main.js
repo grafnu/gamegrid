@@ -149,9 +149,11 @@ function load_player(id, uid) {
     status_update(`Player slot ${id}`);
     player_id = id;
   }
+
   if (loaded_players[id]) {
     return;
   }
+
   loaded_players[id] = uid;
   user_doc = get_user_doc(uid);
   const pel = document.createElement('div');
@@ -165,6 +167,14 @@ function load_player(id, uid) {
   });
 }
 
+function update_player(id, game_data) {
+  let selector = `#players .player-label[pid="${id}"]`;
+  let cell = document.querySelector(selector);
+  let move = game_data.moves[id];
+  let ready = move.updated > game_data.last;
+  cell.classList.toggle('move-ready', ready);
+}
+
 function get_players_doc(uid) {
   return get_game_doc().collection('players').doc(uid);
 }
@@ -173,6 +183,9 @@ function setup_players(game_data) {
   players = game_data.players || {};
   for (var player in players) {
     load_player(player, players[player]);
+    update_player(player, game_data);
+
+
   }
   if (player_id < 0) {
     ensure_player();

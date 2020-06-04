@@ -26,3 +26,7 @@ div[pid="2"] {
 div[pid="3"] {
     background: yellow;
 }
+
+#players .move-ready {
+    opacity: 0.5;
+}
