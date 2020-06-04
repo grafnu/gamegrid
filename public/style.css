@@ -11,6 +11,10 @@
     color: white;
 }
 
+#map .move-select {
+    background: darkgrey;
+}
+
 div[pid="0"] {
     background: red;
 }

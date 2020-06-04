@@ -65,10 +65,29 @@ function write_move(x, y) {
   });
 }
 
+function do_select(xpos, ypos, ready) {
+  let selector = `#map .hex[xpos="${xpos}"][ypos="${ypos}"]`;
+  let element = document.querySelector(selector);
+  let current = element.getAttribute('pid');
+  let previous = document.querySelector('#map .move-select');
+  previous && previous.classList.remove('move-select');
+
+  if (current != null && current >= 0) {
+    return false;
+  }
+
+  ready && element.classList.add('move-select');
+
+  return true;
+}
+
 function hex_click(e) {
-  xpos = Number(e.srcElement.getAttribute('xpos'))
-  ypos = Number(e.srcElement.getAttribute('ypos'))
-  write_move(xpos, ypos)
+  let element = e.srcElement;
+  xpos = Number(element.getAttribute('xpos'));
+  ypos = Number(element.getAttribute('ypos'));
+  if (do_select(xpos, ypos)) {
+    write_move(xpos, ypos);
+  }
 }
 
 function make_map() {
@@ -173,6 +192,9 @@ function update_player(id, game_data) {
   let move = game_data.moves[id];
   let ready = move.updated > game_data.last;
   cell.classList.toggle('move-ready', ready);
+  if (id == player_id && move.move && move.move.xpos) {
+    do_select(move.move.xpos, move.move.ypos, ready);
+  }
 }
 
 function get_players_doc(uid) {
@@ -184,8 +206,6 @@ function setup_players(game_data) {
   for (var player in players) {
     load_player(player, players[player]);
     update_player(player, game_data);
-
-
   }
   if (player_id < 0) {
     ensure_player();
